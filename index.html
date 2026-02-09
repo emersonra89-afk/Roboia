@@ -54,11 +54,9 @@
                     detectLoop();
                     aiBtn.disabled = false;
                     aiBtn.innerText = "Cleiton, o que você vê?";
-                    statusBox.innerText = "Cleiton Pro 2 Online! Cole a chave e teste.";
+                    statusBox.innerText = "Sistema Online! Cole a chave e teste.";
                 };
-            } catch (e) {
-                statusBox.innerText = "Erro na câmera: " + e.message;
-            }
+            } catch (e) { statusBox.innerText = "Erro na câmera: " + e.message; }
         }
 
         async function detectLoop() {
@@ -66,8 +64,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             objetosAtuais = predictions.map(p => p.class);
             predictions.forEach(p => {
-                ctx.strokeStyle = "#FFD700";
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 3;
                 ctx.strokeRect(...p.bbox);
                 ctx.fillStyle = "#FFD700";
                 ctx.fillText(p.class, p.bbox[0], p.bbox[1] > 10 ? p.bbox[1] - 5 : 10);
@@ -83,34 +80,36 @@
             aiBtn.disabled = true;
 
             const lista = [...new Set(objetosAtuais)].join(", ");
-            const prompt = `Você é o robô Cleiton. Você está vendo: ${lista || 'nada'}. Dê um recado curto para Emerson ou Ian em português.`;
+            const prompt = `Você é o robô Cleiton. Você está vendo: ${lista || 'nada'}. Dê um recado curto para o Emerson ou para o Ian.`;
 
             try {
-                // MUDANÇA AQUI: Usando o endpoint v1 e o nome do modelo sem o prefixo 'models/'
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${key}`;
+                // AJUSTE DO ENDEREÇO PARA O FORMATO PADRÃO V1
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: prompt }]
+                        }]
+                    })
                 });
 
                 const data = await response.json();
 
                 if (data.error) {
-                    statusBox.innerHTML = `<strong>Erro do Google:</strong><br>${data.error.message} (Status: ${data.error.status})`;
+                    statusBox.innerHTML = `<strong>Erro da API:</strong><br>${data.error.message}`;
                 } else if (data.candidates && data.candidates[0].content) {
                     const texto = data.candidates[0].content.parts[0].text;
                     statusBox.innerText = texto;
                     falar(texto);
                 } else {
-                    statusBox.innerText = "Resposta vazia. Pode ser um filtro de segurança.";
+                    statusBox.innerText = "O Gemini não gerou resposta. Tente novamente.";
                 }
             } catch (err) {
-                statusBox.innerText = "Erro de rede: " + err.message;
-            } finally {
-                aiBtn.disabled = false;
-            }
+                statusBox.innerText = "Erro de conexão: " + err.message;
+            } finally { aiBtn.disabled = false; }
         }
 
         function falar(t) {
