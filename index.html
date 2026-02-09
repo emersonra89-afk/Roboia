@@ -13,7 +13,7 @@
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         .ui-panel { width: 90vw; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         input { padding: 15px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; }
-        button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; }
+        button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; }
         button:disabled { background: #444; color: #888; }
         #status-box { width: 100%; min-height: 100px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; color: #fff; overflow-wrap: break-word; }
     </style>
@@ -29,7 +29,7 @@
 
     <div class="ui-panel">
         <input type="text" id="apiKey" placeholder="Cole sua API Key aqui">
-        <button id="aiBtn" onclick="analisarComIA()" disabled>Iniciando...</button>
+        <button id="aiBtn" onclick="analisarComIA()" disabled>Iniciando Sistema...</button>
         <div id="status-box">Aguardando IA de visão local...</div>
     </div>
 
@@ -54,7 +54,7 @@
                     detectLoop();
                     aiBtn.disabled = false;
                     aiBtn.innerText = "Cleiton, o que você vê?";
-                    statusBox.innerText = "Sistema Online! Cole a chave e teste.";
+                    statusBox.innerText = "Cleiton Pro 2 Online! Cole a chave e teste.";
                 };
             } catch (e) { statusBox.innerText = "Erro na câmera: " + e.message; }
         }
@@ -80,35 +80,33 @@
             aiBtn.disabled = true;
 
             const lista = [...new Set(objetosAtuais)].join(", ");
-            const prompt = `Você é o robô Cleiton. Você está vendo: ${lista || 'nada'}. Dê um recado curto para o Emerson ou para o Ian.`;
+            const prompt = `Você é o robô Cleiton. Você vê: ${lista || 'nada no momento'}. Dê um recado curto para o Emerson ou para o Ian em português.`;
 
             try {
-                // AJUSTE DO ENDEREÇO PARA O FORMATO PADRÃO V1
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${key}`;
+                // MUDANÇA CRUCIAL NO ENDEREÇO (URL)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: prompt }]
-                        }]
+                        contents: [{ parts: [{ text: prompt }] }]
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.error) {
-                    statusBox.innerHTML = `<strong>Erro da API:</strong><br>${data.error.message}`;
+                    statusBox.innerHTML = `<strong>Erro:</strong> ${data.error.message}`;
                 } else if (data.candidates && data.candidates[0].content) {
                     const texto = data.candidates[0].content.parts[0].text;
                     statusBox.innerText = texto;
                     falar(texto);
                 } else {
-                    statusBox.innerText = "O Gemini não gerou resposta. Tente novamente.";
+                    statusBox.innerText = "Resposta vazia. Tente novamente.";
                 }
             } catch (err) {
-                statusBox.innerText = "Erro de conexão: " + err.message;
+                statusBox.innerText = "Erro de rede: " + err.message;
             } finally { aiBtn.disabled = false; }
         }
 
