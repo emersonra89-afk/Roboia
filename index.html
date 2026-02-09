@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cleiton Vision Pro 2</title>
+    <title>Cleiton Vision Pro 7</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
@@ -12,9 +12,9 @@
         #video-container { position: relative; width: 95vw; height: 45vh; border-radius: 15px; overflow: hidden; border: 2px solid #FFD700; background: #000; }
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         .ui-panel { width: 90vw; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        input { padding: 15px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; }
+        input { padding: 15px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; font-size: 14px; }
         button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; }
-        #status-box { width: 100%; min-height: 100px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; overflow-wrap: break-word; }
+        #status-box { width: 100%; min-height: 120px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; overflow-wrap: break-word; }
     </style>
 </head>
 <body>
@@ -41,15 +41,17 @@
         let objetosAtuais = [];
 
         async function start() {
-            model = await cocoSsd.load();
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                detectLoop();
-                statusBox.innerText = "Cleiton Pro 2 Pronto!";
-            };
+            try {
+                model = await cocoSsd.load();
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    detectLoop();
+                    statusBox.innerText = "Sistema Online! Cole a chave e teste.";
+                };
+            } catch (e) { statusBox.innerText = "Erro na câmera: " + e.message; }
         }
 
         async function detectLoop() {
@@ -67,19 +69,23 @@
             const key = document.getElementById('apiKey').value.trim();
             if (!key) return alert("Emerson, cole a sua chave API!");
             
-            statusBox.innerText = "Consultando o Gemini...";
+            statusBox.innerText = "Consultando o cérebro (Gemini)...";
 
             const lista = [...new Set(objetosAtuais)].join(", ");
             const prompt = `Você é o robô Cleiton. Você vê: ${lista || 'nada no momento'}. Dê um recado curto para Emerson ou Ian em português.`;
 
             try {
-                // LINK CORRIGIDO: Usando o formato v1beta que é o que sua chave exige
+                // A URL exata recomendada para v1beta em navegadores
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: prompt }]
+                        }]
+                    })
                 });
 
                 const data = await response.json();
@@ -87,15 +93,17 @@
                 if (data.candidates && data.candidates[0].content) {
                     const texto = data.candidates[0].content.parts[0].text;
                     statusBox.innerText = texto;
+                    // Síntese de voz
                     const synth = window.speechSynthesis;
                     const utter = new SpeechSynthesisUtterance(texto);
                     utter.lang = 'pt-BR';
                     synth.speak(utter);
                 } else {
-                    statusBox.innerText = "Erro da API: " + JSON.stringify(data);
+                    // Se houver erro, mostramos o erro real para diagnosticar
+                    statusBox.innerText = "Erro do Google: " + (data.error ? data.error.message : JSON.stringify(data));
                 }
             } catch (err) {
-                statusBox.innerText = "Erro de rede: " + err.message;
+                statusBox.innerText = "Erro de rede/CORS: Verifique se está usando HTTPS e sua conexão.";
             }
         }
 
