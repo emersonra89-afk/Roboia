@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cleiton Vision Pro 2</title>
+    <title>Cleiton Vision Pro 5</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
@@ -13,9 +13,8 @@
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         .ui-panel { width: 90vw; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         input { padding: 15px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; }
-        button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; }
-        button:disabled { background: #444; color: #888; }
-        #status-box { width: 100%; min-height: 100px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; color: #fff; overflow-wrap: break-word; }
+        button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; }
+        #status-box { width: 100%; min-height: 100px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -29,34 +28,27 @@
 
     <div class="ui-panel">
         <input type="text" id="apiKey" placeholder="Cole sua API Key aqui">
-        <button id="aiBtn" onclick="analisarComIA()" disabled>Iniciando Sistema...</button>
-        <div id="status-box">Aguardando IA de visão local...</div>
+        <button id="aiBtn" onclick="analisarComIA()">Cleiton, o que você vê?</button>
+        <div id="status-box">Aguardando...</div>
     </div>
 
     <script>
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('canvas');
         const statusBox = document.getElementById('status-box');
-        const aiBtn = document.getElementById('aiBtn');
         const ctx = canvas.getContext('2d');
         let model;
         let objetosAtuais = [];
 
         async function start() {
-            try {
-                statusBox.innerText = "Carregando Visão Local...";
-                model = await cocoSsd.load();
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    detectLoop();
-                    aiBtn.disabled = false;
-                    aiBtn.innerText = "Cleiton, o que você vê?";
-                    statusBox.innerText = "Cleiton Pro 2 Online! Cole a chave e teste.";
-                };
-            } catch (e) { statusBox.innerText = "Erro na câmera: " + e.message; }
+            model = await cocoSsd.load();
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                detectLoop();
+            };
         }
 
         async function detectLoop() {
@@ -64,27 +56,23 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             objetosAtuais = predictions.map(p => p.class);
             predictions.forEach(p => {
-                ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 3;
+                ctx.strokeStyle = "#FFD700";
                 ctx.strokeRect(...p.bbox);
-                ctx.fillStyle = "#FFD700";
-                ctx.fillText(p.class, p.bbox[0], p.bbox[1] > 10 ? p.bbox[1] - 5 : 10);
             });
             requestAnimationFrame(detectLoop);
         }
 
         async function analisarComIA() {
             const key = document.getElementById('apiKey').value.trim();
-            if (!key) return alert("Emerson, cole a sua chave API!");
-            
-            statusBox.innerText = "Consultando o Gemini...";
-            aiBtn.disabled = true;
+            if (!key) return alert("Cole a chave!");
 
+            statusBox.innerText = "Pensando...";
             const lista = [...new Set(objetosAtuais)].join(", ");
-            const prompt = `Você é o robô Cleiton. Você vê: ${lista || 'nada no momento'}. Dê um recado curto para o Emerson ou para o Ian em português.`;
+            const prompt = `Você é o robô Cleiton. Você vê: ${lista || 'nada'}. Dê um recado curto para Emerson ou Ian.`;
 
             try {
-                // MUDANÇA CRUCIAL NO ENDEREÇO (URL)
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+                // MUDANÇA TÉCNICA AQUI: Removido o prefixo 'models/' da URL
+                const url = `https://generativelanguage.googleapis.com/v1beta/gemini-1.5-flash:generateContent?key=${key}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -96,25 +84,19 @@
 
                 const data = await response.json();
 
-                if (data.error) {
-                    statusBox.innerHTML = `<strong>Erro:</strong> ${data.error.message}`;
-                } else if (data.candidates && data.candidates[0].content) {
+                if (data.candidates && data.candidates[0].content) {
                     const texto = data.candidates[0].content.parts[0].text;
                     statusBox.innerText = texto;
-                    falar(texto);
+                    const synth = window.speechSynthesis;
+                    const utter = new SpeechSynthesisUtterance(texto);
+                    utter.lang = 'pt-BR';
+                    synth.speak(utter);
                 } else {
-                    statusBox.innerText = "Resposta vazia. Tente novamente.";
+                    statusBox.innerText = "Erro: " + JSON.stringify(data);
                 }
             } catch (err) {
                 statusBox.innerText = "Erro de rede: " + err.message;
-            } finally { aiBtn.disabled = false; }
-        }
-
-        function falar(t) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(t);
-            u.lang = 'pt-BR';
-            window.speechSynthesis.speak(u);
+            }
         }
 
         start();
