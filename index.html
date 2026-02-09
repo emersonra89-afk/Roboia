@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cleiton Vision Pro 5</title>
+    <title>Cleiton Vision Pro 2</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
@@ -13,8 +13,8 @@
         video, canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         .ui-panel { width: 90vw; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         input { padding: 15px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; }
-        button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; }
-        #status-box { width: 100%; min-height: 100px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; }
+        button { padding: 15px; border-radius: 10px; border: none; background: #FFD700; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; }
+        #status-box { width: 100%; min-height: 100px; padding: 12px; margin-top: 10px; border-left: 4px solid #FFD700; background: #1e1e1e; font-size: 0.9rem; box-sizing: border-box; overflow-wrap: break-word; }
     </style>
 </head>
 <body>
@@ -29,7 +29,7 @@
     <div class="ui-panel">
         <input type="text" id="apiKey" placeholder="Cole sua API Key aqui">
         <button id="aiBtn" onclick="analisarComIA()">Cleiton, o que você vê?</button>
-        <div id="status-box">Aguardando...</div>
+        <div id="status-box">Aguardando IA local...</div>
     </div>
 
     <script>
@@ -48,6 +48,7 @@
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 detectLoop();
+                statusBox.innerText = "Cleiton Pro 2 Pronto!";
             };
         }
 
@@ -56,7 +57,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             objetosAtuais = predictions.map(p => p.class);
             predictions.forEach(p => {
-                ctx.strokeStyle = "#FFD700";
+                ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 3;
                 ctx.strokeRect(...p.bbox);
             });
             requestAnimationFrame(detectLoop);
@@ -64,22 +65,21 @@
 
         async function analisarComIA() {
             const key = document.getElementById('apiKey').value.trim();
-            if (!key) return alert("Cole a chave!");
+            if (!key) return alert("Emerson, cole a sua chave API!");
+            
+            statusBox.innerText = "Consultando o Gemini...";
 
-            statusBox.innerText = "Pensando...";
             const lista = [...new Set(objetosAtuais)].join(", ");
-            const prompt = `Você é o robô Cleiton. Você vê: ${lista || 'nada'}. Dê um recado curto para Emerson ou Ian.`;
+            const prompt = `Você é o robô Cleiton. Você vê: ${lista || 'nada no momento'}. Dê um recado curto para Emerson ou Ian em português.`;
 
             try {
-                // MUDANÇA TÉCNICA AQUI: Removido o prefixo 'models/' da URL
-                const url = `https://generativelanguage.googleapis.com/v1beta/gemini-1.5-flash:generateContent?key=${key}`;
+                // LINK CORRIGIDO: Usando o formato v1beta que é o que sua chave exige
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
 
                 const data = await response.json();
@@ -92,7 +92,7 @@
                     utter.lang = 'pt-BR';
                     synth.speak(utter);
                 } else {
-                    statusBox.innerText = "Erro: " + JSON.stringify(data);
+                    statusBox.innerText = "Erro da API: " + JSON.stringify(data);
                 }
             } catch (err) {
                 statusBox.innerText = "Erro de rede: " + err.message;
